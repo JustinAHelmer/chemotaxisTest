@@ -1,8 +1,10 @@
 # chemotaxis_sim/cell.py
 
 import numpy as np
+from time import perf_counter
 from config import *
 from step_core import step_all_cells
+
 
 class CellBatch:
     def __init__(self, M):
@@ -16,18 +18,15 @@ class CellBatch:
 
         self.ligand_exposure = np.zeros(M)
 
-        # History arrays (list of M lists)
-        self.x_hist = [[] for _ in range(M)]
-        self.yp_hist = [[] for _ in range(M)]
-
-        # Initialize histories with initial positions
-        for i in range(M):
-            self.x_hist[i].append(self.x[i])
-            self.yp_hist[i].append(self.yp[i])
+        # History arrays: store snapshots for each step (faster than per‑cell appends)
+        self.x_hist = [self.x.copy()]
+        self.yp_hist = [self.yp.copy()]
 
     def step_all(self, dt, mu_val, step_idx):
-        t_sim = step_idx * dt
+        # --- timing checkpoint 0 -------------------------------------------
+        #t0 = perf_counter()
 
+        t_sim = step_idx * dt
         self.x, self.yp, self.m, self.state, self.theta, L_arr = step_all_cells(
             self.x, self.yp, self.m, self.state, self.theta, self.CheY_tot,
             dt, t_sim,
@@ -36,13 +35,30 @@ class CellBatch:
             k_Y, k_Z, gamma_Y, CheZ, mu_val, sigma, L_max
         )
 
-        # Update exposure
+        # --- timing checkpoint 1 -------------------------------------------
+        #t1 = perf_counter()
+
+        # Update exposure (vectorised)
         self.ligand_exposure += L_arr * dt
 
-        # Update history
-        for i in range(self.M):
-            self.x_hist[i].append(self.x[i])
-            self.yp_hist[i].append(self.yp[i])
+        # --- timing checkpoint 2 -------------------------------------------
+        #t2 = perf_counter()
+
+        # Update history (single vector copy instead of Python loop)
+        self.x_hist.append(self.x.copy())
+        self.yp_hist.append(self.yp.copy())
+
+        # --- timing checkpoint 3 -------------------------------------------
+        #t3 = perf_counter()
+
+        # Simple printout of durations
+        #print(
+        #    f"[timing] step {step_idx} | "
+        #    f"core: {t1 - t0:.6f}s | "
+        #    f"exposure: {t2 - t1:.6f}s | "
+        #    f"history: {t3 - t2:.6f}s | "
+        #    f"total: {t3 - t0:.6f}s"
+        #)
 
     def exposures(self):
         return self.ligand_exposure

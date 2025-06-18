@@ -3,7 +3,7 @@
 import numpy as np
 from numba import njit, prange
 
-@njit(parallel=True)
+@njit(parallel=True,fastmath=True)
 def step_all_cells(x, yp, m, state, theta, CheY_tot, dt, t,
                    epsilon0, epsilon1, N, Koff, Kon, F_star, tau,
                    epsilon2, epsilon3, K, omega, Dr, v,
