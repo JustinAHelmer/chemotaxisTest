@@ -8,6 +8,8 @@ import csv
 from config import *
 from cell import CellBatch
 from environment import mu
+from time import perf_counter  # add this import
+
 
 # Simulation Setup
 if not ROCK_GRADIENT:
@@ -17,12 +19,14 @@ n_steps = int(T / dt)
 
 # Run Simulation
 cells = CellBatch(M)
-
+#t_start = perf_counter()  
 for step in range(n_steps):
     mu_val = mu(step * dt)
     cells.step_all(dt, mu_val, step)
-    if step % 1000 == 0:
-        print(f"Step {step} / {n_steps}")
+    #if step % 100000 == 0:
+    #    print(f"Step {step} / {n_steps}")
+#t_total = perf_counter() - t_start   # just after the loop
+#print(f"Time for loop: {t_total :.6f} s")
 # Log Exposure
 avg_exposure = np.mean(cells.exposures())
 print(f"\nAverage ligand exposure: {avg_exposure:.4f} mM·s")
@@ -65,8 +69,8 @@ if not ROCK_GRADIENT:
     plt.imshow(L_grid, extent=[-4000, 4000, -4000, 4000], origin='lower',
                cmap='viridis', alpha=0.6, aspect='auto')
 
-for i in range(M):
-    plt.plot(cells.x_hist[i], cells.yp_hist[i], lw=0.8, alpha=0.9)
+#for i in range(M):
+#    plt.plot(cells.x_hist[i], cells.yp_hist[i], lw=0.8, alpha=0.9)
 
 plt.xlabel("x (μm)")
 plt.ylabel("y (μm)")
