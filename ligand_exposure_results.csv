@@ -1,0 +1,8 @@
+Mode,Rocking,Cells,Time,dt,AvgExposure
+Normal,False,5,5000.0,0.01,285.699277
+Normal,False,5,5000.0,0.01,307.54822
+Normal,False,5,5000.0,0.01,299.997232
+Normal,True,5,5000.0,0.01,180.050547
+Normal,True,5,5000.0,0.01,182.459505
+Normal,True,50,5000.0,0.01,179.240045
+Normal,True,50,5000.0,0.01,177.44296
