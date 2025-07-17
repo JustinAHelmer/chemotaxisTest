@@ -55,10 +55,9 @@ pa0 = jnp.log(jnp.array([W_act0[j,i]+eps for j,i in pos], dtype=jnp.float32))
 nr0 = jnp.log(jnp.array([W_rep0[j,i]+eps for j,i in neg], dtype=jnp.float32))
 ua0 = jnp.log(jnp.array(rng.uniform(0.01,0.1,len(unk)), dtype=jnp.float32))
 ur0 = jnp.log(jnp.array(rng.uniform(0.01,0.1,len(unk)), dtype=jnp.float32))
-#tS0 = jnp.log(jnp.array(S0, dtype=jnp.float32))
-#tk0 = jnp.log(jnp.array(k0, dtype=jnp.float32))
-#theta0 = (pa0, nr0, ua0, ur0, tS0, tk0)
-theta0 = (pa0, nr0, ua0, ur0)
+tS0 = jnp.log(jnp.array(S0, dtype=jnp.float32))
+tk0 = jnp.log(jnp.array(k0, dtype=jnp.float32))
+theta0 = (pa0, nr0, ua0, ur0, tS0, tk0)
 
 # penalty weight on log-k drift
 λ_k = 1e-3
@@ -66,16 +65,13 @@ theta0 = (pa0, nr0, ua0, ur0)
 # ── 6) Rebuild function ──────────────────────────────────────────────────────
 @jax.jit
 def rebuild(theta):
-    #pa,nr,ua,ur,tS,tk = theta
-    pa, nr, ua, ur = theta
+    pa,nr,ua,ur,tS,tk = theta
     W_act = W_act_base.at[(pos_idx[0],pos_idx[1])].set(jnp.exp(pa))
     W_rep = W_rep_base.at[(neg_idx[0],neg_idx[1])].set(jnp.exp(nr))
     W_act = W_act.at   [(unk_idx[0],unk_idx[1])].set(jnp.exp(ua))
     W_rep = W_rep.at   [(unk_idx[0],unk_idx[1])].set(jnp.exp(ur))
-    #S_vec = jnp.exp(tS)
-    #k_vec = jnp.exp(tk)
-    S_vec = S0
-    k_vec = k0
+    S_vec = jnp.exp(tS)
+    k_vec = jnp.exp(tk)
     return W_act, W_rep, S_vec, n_vec, rp_mat, k_vec
 
 # ── 7) Rollout & gather simulated log₂‐FCs ──────────────────────────────────
@@ -101,25 +97,11 @@ def simulate_all(theta):
     fin  = x_fin[-1, exp_idx]
     return jnp.log2((fin+eps)/(base+eps))
 
-# ── 8) Loss = MSE across all measured nodes ─────────────────────────────
+# ── 8) Loss = MSE across all measured nodes ─────────────────────────────────
 @jax.jit
 def loss_fn(theta):
-    # 1) simulate the 0→1000 µM pulse and get predicted log₂‐FCs
-    sim = simulate_all(theta)                    # shape = (num_meas,)
-    L_fc = jnp.mean((sim - exp_vals)**2)         # fold‐change MSE
-
-    # 2) tiny L₂ penalty on the four trainable log-weights
-    pa, nr, ua, ur = theta
-    λ_w = 1e-6
-    L_w = λ_w * (
-        jnp.mean((pa - pa0)**2) +
-        jnp.mean((nr - nr0)**2) +
-        jnp.mean((ua - ua0)**2) +
-        jnp.mean((ur - ur0)**2)
-    )
-
-    return L_fc + L_w
-
+    sim = simulate_all(theta)
+    return jnp.mean((sim - exp_vals)**2)
 
 
 loss_and_grad = jax.jit(jax.value_and_grad(loss_fn))
